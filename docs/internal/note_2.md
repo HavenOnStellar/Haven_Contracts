@@ -1,0 +1,1 @@
+- Internal note 2 for contracts
