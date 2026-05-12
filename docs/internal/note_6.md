@@ -1,0 +1,1 @@
+- Internal note 6 for contracts
