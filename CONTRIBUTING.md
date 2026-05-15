@@ -8,15 +8,15 @@ Thank you for your interest in contributing to Haven! We're building the decentr
 
 ```bash
 # For contracts
-git clone https://github.com/Haven-Protocol/haven-contracts.git
+git clone https://github.com/HavenOnStellar/Haven_Contracts.git
 
 # For frontend
-git clone https://github.com/Haven-Protocol/haven-frontend.git
+git clone https://github.com/HavenOnStellar/Haven_Frontend.git
 ```
 
 ### 2. Pick an Issue
 
-- Browse open issues on [haven-contracts](https://github.com/Haven-Protocol/haven-contracts/issues) or [haven-frontend](https://github.com/Haven-Protocol/haven-frontend/issues)
+- Browse open issues on [haven-contracts](https://github.com/HavenOnStellar/Haven_Contracts/issues) or [haven-frontend](https://github.com/HavenOnStellar/Haven_Frontend/issues)
 - Look for labels: `good-first-issue`, `help-wanted`, `contracts`, `frontend`
 - Comment on the issue to let us know you're working on it
 
@@ -152,4 +152,4 @@ Be respectful, inclusive, and constructive. We're building technology to fight d
 
 ## 📬 Questions?
 
-Open a [Discussion](https://github.com/Haven-Protocol/haven/discussions) or reach out to the maintainers. We're happy to help you get started!
+Open a [Discussion](https://github.com/HavenOnStellar/discussions) or reach out to the maintainers. We're happy to help you get started!

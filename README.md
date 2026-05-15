@@ -136,9 +136,9 @@ When pitching Haven to insurance providers as their proof-of-loss infrastructure
 
 ## 📁 Project Structure
 
-The project is organized as **two separate repositories** under the [Haven-Protocol](https://github.com/Haven-Protocol) GitHub organization:
+The project is organized as **two separate repositories** under the [HavenOnStellar](https://github.com/HavenOnStellar) GitHub organization:
 
-### [`haven-contracts`](https://github.com/Haven-Protocol/haven-contracts)
+### [`haven-contracts`](https://github.com/HavenOnStellar/Haven_Contracts)
 
 ```
 contracts/
@@ -156,7 +156,7 @@ contracts/
             └── test.rs             # 9 passing tests
 ```
 
-### [`haven-frontend`](https://github.com/Haven-Protocol/haven-frontend)
+### [`haven-frontend`](https://github.com/HavenOnStellar/Haven_Frontend)
 
 ```
 frontend/
@@ -184,14 +184,14 @@ frontend/
 
 ### 1. Clone the Repositories
 
-The project is split into two repositories under the [Haven-Protocol](https://github.com/Haven-Protocol) organization:
+The project is split into two repositories under the [HavenOnStellar](https://github.com/HavenOnStellar) organization:
 
 ```bash
 # Smart Contracts
-git clone https://github.com/Haven-Protocol/haven-contracts.git
+git clone https://github.com/HavenOnStellar/Haven_Contracts.git
 
 # Frontend
-git clone https://github.com/Haven-Protocol/haven-frontend.git
+git clone https://github.com/HavenOnStellar/Haven_Frontend.git
 ```
 
 ### 2. Smart Contracts
@@ -370,5 +370,5 @@ See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for the full guide including branch
 <div align="center">
   <i>Built with ❤️ to defeat the black market.</i>
   <br /><br />
-  <a href="https://github.com/Haven-Protocol/haven-contracts/issues">Report a Bug</a> · <a href="https://github.com/Haven-Protocol/haven-frontend/issues">Request a Feature</a> · <a href="./CONTRIBUTING.md">Contribute</a>
+  <a href="https://github.com/HavenOnStellar/Haven_Contracts/issues">Report a Bug</a> · <a href="https://github.com/HavenOnStellar/Haven_Frontend/issues">Request a Feature</a> · <a href="./CONTRIBUTING.md">Contribute</a>
 </div>
