@@ -9,7 +9,18 @@
   [![Built on Stellar](https://img.shields.io/badge/Built%20on-Stellar-000000.svg)](https://stellar.org)
   [![Soroban Smart Contracts](https://img.shields.io/badge/Contracts-Soroban-5BC4C1.svg)](https://soroban.stellar.org)
   [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg)](./CONTRIBUTING.md)
+  [![Docs](https://img.shields.io/badge/Docs-GitBook-3884ff.svg)](https://haven-docs.gitbook.io/haven/)
 </div>
+
+---
+
+## 📚 Documentation
+
+The dedicated Haven documentation is available on GitBook:
+
+**https://haven-docs.gitbook.io/haven/**
+
+Use the docs for architecture notes, contributor setup, contract references, and protocol guides.
 
 ---
 
@@ -379,5 +390,5 @@ See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for the full guide including branch
 <div align="center">
   <i>Built with ❤️ to defeat the black market.</i>
   <br /><br />
-  <a href="https://github.com/HavenOnStellar/Haven_Contracts/issues">Report a Bug</a> · <a href="https://github.com/HavenOnStellar/Haven_Frontend/issues">Request a Feature</a> · <a href="./CONTRIBUTING.md">Contribute</a>
+  <a href="https://github.com/HavenOnStellar/Haven_Contracts/issues">Report a Bug</a> · <a href="https://github.com/HavenOnStellar/Haven_Frontend/issues">Request a Feature</a> · <a href="https://haven-docs.gitbook.io/haven/">Read the Docs</a> · <a href="./CONTRIBUTING.md">Contribute</a>
 </div>
