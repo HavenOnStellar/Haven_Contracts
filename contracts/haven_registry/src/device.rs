@@ -8,7 +8,7 @@
 //! 3. A `DeviceState` is created and stored on-chain
 //! 4. Anyone can query `get_device` to check a device's status
 
-use soroban_sdk::{Address, BytesN, Env, String};
+use soroban_sdk::{symbol_short, Address, BytesN, Env, String};
 
 use crate::{DataKey, DeviceState};
 
@@ -19,13 +19,19 @@ use crate::{DataKey, DeviceState};
 /// 2. Ensure the device hasn't already been registered
 /// 3. Create and persist the `DeviceState`
 /// 4. Increment the global device counter
+/// 5. Emit a `DeviceRegistered` event
+///
+/// # Events
+/// Emits a `DeviceRegistered` event with topics `("dev_reg", "register")` and data:
+/// - `hashed_imei`: The SHA-256 hash of the device IMEI
+/// - `owner`: The device owner's address
+/// - `device_model`: The device model string
 ///
 /// # Panics
 /// - If `owner` has not authorized the transaction
 /// - If a device with the same `hashed_imei` already exists
 ///
 /// # TODO
-/// - [ ] Emit a `DeviceRegistered` event for indexers
 /// - [ ] Add optional metadata fields (color, storage capacity, etc.)
 /// - [ ] Consider adding a small registration fee to prevent spam
 pub fn register_device(
@@ -47,7 +53,7 @@ pub fn register_device(
     let device = DeviceState {
         owner: owner.clone(),
         hashed_imei: hashed_imei.clone(),
-        device_model,
+        device_model: device_model.clone(),
         is_stolen: false,
         registered_at: env.ledger().sequence(),
         recovery_contact: String::from_str(&env, ""),
@@ -67,8 +73,11 @@ pub fn register_device(
         .instance()
         .set(&DataKey::DeviceCount, &(count + 1));
 
-    // TODO: Emit a DeviceRegistered event
-    // env.events().publish((symbol_short!("register"),), &device);
+    // Emit DeviceRegistered event
+    env.events().publish(
+        (symbol_short!("dev_reg"), symbol_short!("register")),
+        (hashed_imei.clone(), owner.clone(), device_model)
+    );
 
     device
 }

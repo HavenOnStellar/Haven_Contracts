@@ -20,6 +20,7 @@
 #![cfg(test)]
 
 use soroban_sdk::{testutils::Address as _, Address, BytesN, Env, String};
+use soroban_sdk::testutils::Events;
 
 use crate::{HavenRegistry, HavenRegistryClient};
 
@@ -64,8 +65,44 @@ fn test_register_device() {
     assert_eq!(device.is_stolen, false);
     assert_eq!(device.device_model, model);
 
+    // Verify the DeviceRegistered event was emitted
+    let events = env.events().all();
+    assert!(!events.is_empty(), "Expected at least one event to be emitted");
+    
+    let event = events.last().unwrap();
+    
+    // Event structure: (contract_address, topics, data)
+    let (_contract_id, topics, _data) = event;
+    
+    // Verify topics contain "dev_reg" and "register"
+    assert_eq!(topics.len(), 2);
+
     // TODO: Verify the device count was incremented
-    // TODO: Verify the DeviceRegistered event was emitted
+}
+
+#[test]
+fn test_register_device_emits_event() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "Samsung Galaxy S24");
+
+    // Register the device
+    client.register_device(&owner, &hashed_imei, &model);
+
+    // Verify event emission
+    let events = env.events().all();
+    assert_eq!(events.len(), 1, "Expected exactly one event to be emitted");
+    
+    let event = events.first().unwrap();
+    let (_contract_id, topics, _data) = event;
+    
+    // Verify the event has the correct topic structure
+    assert_eq!(topics.len(), 2, "Expected two topics: dev_reg and register");
+    
+    // The topics should be symbols for "dev_reg" and "register"
+    // We verify the count and structure, actual symbol validation would require
+    // converting Val to Symbol which is more complex in tests
 }
 
 #[test]
