@@ -248,6 +248,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) to see the landing page.
 
+### 5. Deployed Testnet Contract
+
+The registry contract is currently deployed on the Stellar Testnet at:
+
+- **Contract ID:** `CAT2TDBXGW6GETW52MQB725PLWN2CBVO3TXJ7PRJ73YSKLHRA7SRN6FC`
+- **Network Explorer:** [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAT2TDBXGW6GETW52MQB725PLWN2CBVO3TXJ7PRJ73YSKLHRA7SRN6FC)
+
+You can use this Contract ID in the frontend to interact with the deployed registry.
+
 ---
 
 ## 🗺️ Roadmap
