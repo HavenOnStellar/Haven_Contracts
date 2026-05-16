@@ -41,6 +41,8 @@ mod test;
 pub enum DataKey {
     /// The contract administrator address.
     Admin,
+    /// The SAC token contract used for recovery bounty escrow deposits.
+    BountyToken,
     /// Maps a hashed IMEI (SHA-256, 32 bytes) to its `DeviceState`.
     Device(BytesN<32>),
     /// Maps a hashed IMEI to the escrowed bounty amount (in stroops / USDC units).
@@ -102,6 +104,25 @@ impl HavenRegistry {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::DeviceCount, &0u32);
+    }
+
+    /// Configure the SAC token contract used for recovery bounty escrow.
+    ///
+    /// Only the contract administrator can update this address.
+    pub fn set_bounty_token(env: Env, admin: Address, token: Address) {
+        admin.require_auth();
+
+        let stored_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("not initialized");
+
+        if stored_admin != admin {
+            panic!("not admin");
+        }
+
+        env.storage().instance().set(&DataKey::BountyToken, &token);
     }
 
     // -----------------------------------------------------------------------
@@ -171,12 +192,7 @@ impl HavenRegistry {
     /// the escrowed bounty to the finder's address.
     ///
     /// Only the device owner can call this function.
-    pub fn confirm_recovery(
-        env: Env,
-        owner: Address,
-        hashed_imei: BytesN<32>,
-        finder: Address,
-    ) {
+    pub fn confirm_recovery(env: Env, owner: Address, hashed_imei: BytesN<32>, finder: Address) {
         recovery::confirm_recovery(env, owner, hashed_imei, finder)
     }
 

@@ -12,7 +12,7 @@
 //! - The owner confirms recovery → bounty goes to finder (see `recovery.rs`)
 //! - An insurance claim is filed → bounty may be returned or forfeited (see `insurance.rs`)
 
-use soroban_sdk::{Address, BytesN, Env, String};
+use soroban_sdk::{token, Address, BytesN, Env, String};
 
 use crate::{DataKey, DeviceState};
 
@@ -21,8 +21,8 @@ use crate::{DataKey, DeviceState};
 /// # Flow
 /// 1. Verify the owner has signed the transaction
 /// 2. Load the device state and verify ownership
-/// 3. Flip `is_stolen` to `true`
-/// 4. Store the bounty amount in escrow
+/// 3. Transfer the bounty amount into contract escrow
+/// 4. Flip `is_stolen` to `true` and store the bounty amount
 /// 5. Save the recovery contact for the finder
 ///
 /// # Arguments
@@ -35,11 +35,11 @@ use crate::{DataKey, DeviceState};
 /// - If the device doesn't exist
 /// - If `owner` doesn't match the registered owner
 /// - If the device is already reported as stolen
+/// - If the bounty token has not been configured
+/// - If the token transfer fails
+/// - If `bounty_amount` is not positive
 ///
 /// # TODO
-/// - [ ] Actually transfer XLM/USDC from the owner to the contract's balance
-///       This requires a SAC (Stellar Asset Contract) token transfer call:
-///       `token::Client::new(&env, &token_address).transfer(&owner, &contract_address, &bounty_amount)`
 /// - [ ] Emit a `DeviceStolen` event for indexers and notification services
 /// - [ ] Allow the owner to increase the bounty after initial report
 /// - [ ] Add a minimum bounty threshold to ensure economic viability
@@ -51,6 +51,10 @@ pub fn report_stolen(
     recovery_contact: String,
 ) {
     owner.require_auth();
+
+    if bounty_amount <= 0 {
+        panic!("bounty amount must be positive");
+    }
 
     let device_key = DataKey::Device(hashed_imei.clone());
     let mut device: DeviceState = env
@@ -69,14 +73,25 @@ pub fn report_stolen(
         panic!("device already reported as stolen");
     }
 
+    let token_address: Address = env
+        .storage()
+        .instance()
+        .get(&DataKey::BountyToken)
+        .expect("bounty token not configured");
+    let contract_address = env.current_contract_address();
+
+    token::TokenClient::new(&env, &token_address).transfer(
+        &owner,
+        &contract_address,
+        &bounty_amount,
+    );
+
     // Update device state
     device.is_stolen = true;
     device.recovery_contact = recovery_contact;
     env.storage().persistent().set(&device_key, &device);
 
-    // Store the bounty amount
-    // TODO: Actually transfer tokens from owner to contract
-    // For now, we just record the promised bounty amount
+    // Store the bounty amount only after the escrow transfer succeeds.
     let bounty_key = DataKey::Bounty(hashed_imei);
     env.storage().persistent().set(&bounty_key, &bounty_amount);
 

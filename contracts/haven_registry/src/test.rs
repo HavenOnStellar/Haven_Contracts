@@ -19,13 +19,16 @@
 
 #![cfg(test)]
 
-use soroban_sdk::{testutils::Address as _, Address, BytesN, Env, String};
-use soroban_sdk::testutils::Events;
+use soroban_sdk::{
+    testutils::{Address as _, Events},
+    token::{StellarAssetClient, TokenClient},
+    Address, BytesN, Env, String,
+};
 
 use crate::{HavenRegistry, HavenRegistryClient};
 
 /// Helper: create a test environment and deploy the contract.
-fn setup() -> (Env, HavenRegistryClient<'static>, Address) {
+fn setup() -> (Env, HavenRegistryClient<'static>, Address, Address) {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -35,17 +38,34 @@ fn setup() -> (Env, HavenRegistryClient<'static>, Address) {
 
     client.initialize(&admin);
 
-    (env, client, admin)
+    (env, client, admin, contract_id)
+}
+
+fn setup_with_bounty_token() -> (Env, HavenRegistryClient<'static>, Address, Address, Address) {
+    let (env, client, admin, contract_id) = setup();
+    let token_address = env
+        .register_stellar_asset_contract_v2(admin.clone())
+        .address();
+
+    client.set_bounty_token(&admin, &token_address);
+
+    (env, client, admin, token_address, contract_id)
+}
+
+fn mint_bounty_tokens(env: &Env, token_address: &Address, to: &Address, amount: i128) {
+    StellarAssetClient::new(env, token_address).mint(to, &amount);
 }
 
 /// Helper: generate a fake hashed IMEI (32 bytes).
 fn fake_hashed_imei(env: &Env) -> BytesN<32> {
-    BytesN::from_array(env, &[
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-        0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-    ])
+    BytesN::from_array(
+        env,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
+            0x1d, 0x1e, 0x1f, 0x20,
+        ],
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -54,7 +74,7 @@ fn fake_hashed_imei(env: &Env) -> BytesN<32> {
 
 #[test]
 fn test_register_device() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, _contract_id) = setup();
     let owner = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
     let model = String::from_str(&env, "iPhone 15 Pro");
@@ -67,13 +87,16 @@ fn test_register_device() {
 
     // Verify the DeviceRegistered event was emitted
     let events = env.events().all();
-    assert!(!events.is_empty(), "Expected at least one event to be emitted");
-    
+    assert!(
+        !events.is_empty(),
+        "Expected at least one event to be emitted"
+    );
+
     let event = events.last().unwrap();
-    
+
     // Event structure: (contract_address, topics, data)
     let (_contract_id, topics, _data) = event;
-    
+
     // Verify topics contain "dev_reg" and "register"
     assert_eq!(topics.len(), 2);
 
@@ -82,7 +105,7 @@ fn test_register_device() {
 
 #[test]
 fn test_register_device_emits_event() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, _contract_id) = setup();
     let owner = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
     let model = String::from_str(&env, "Samsung Galaxy S24");
@@ -93,13 +116,13 @@ fn test_register_device_emits_event() {
     // Verify event emission
     let events = env.events().all();
     assert_eq!(events.len(), 1, "Expected exactly one event to be emitted");
-    
+
     let event = events.first().unwrap();
     let (_contract_id, topics, _data) = event;
-    
+
     // Verify the event has the correct topic structure
     assert_eq!(topics.len(), 2, "Expected two topics: dev_reg and register");
-    
+
     // The topics should be symbols for "dev_reg" and "register"
     // We verify the count and structure, actual symbol validation would require
     // converting Val to Symbol which is more complex in tests
@@ -108,7 +131,7 @@ fn test_register_device_emits_event() {
 #[test]
 #[should_panic(expected = "device already registered")]
 fn test_register_device_duplicate() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, _contract_id) = setup();
     let owner = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
     let model = String::from_str(&env, "iPhone 15 Pro");
@@ -120,7 +143,7 @@ fn test_register_device_duplicate() {
 
 #[test]
 fn test_get_device() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, _contract_id) = setup();
     let owner = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
     let model = String::from_str(&env, "Samsung Galaxy S24");
@@ -138,33 +161,42 @@ fn test_get_device() {
 
 #[test]
 fn test_report_stolen() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, token_address, contract_id) = setup_with_bounty_token();
     let owner = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
     let model = String::from_str(&env, "iPhone 15 Pro");
     let contact = String::from_str(&env, "owner@email.com");
 
+    let initial_balance = 5_000_000i128;
+    let bounty_amount = 1_000_000i128;
+    let token = TokenClient::new(&env, &token_address);
+
+    mint_bounty_tokens(&env, &token_address, &owner, initial_balance);
+
     client.register_device(&owner, &hashed_imei, &model);
-    client.report_stolen(&owner, &hashed_imei, &1_000_000i128, &contact);
+    client.report_stolen(&owner, &hashed_imei, &bounty_amount, &contact);
 
     let device = client.get_device(&hashed_imei);
     assert_eq!(device.is_stolen, true);
 
     let bounty = client.get_bounty(&hashed_imei);
-    assert_eq!(bounty, 1_000_000i128);
+    assert_eq!(bounty, bounty_amount);
+    assert_eq!(token.balance(&owner), initial_balance - bounty_amount);
+    assert_eq!(token.balance(&contract_id), bounty_amount);
 
-    // TODO: Verify the actual token transfer occurred
     // TODO: Verify the DeviceStolen event was emitted
 }
 
 #[test]
 #[should_panic(expected = "device already reported as stolen")]
 fn test_report_stolen_twice() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, token_address, _contract_id) = setup_with_bounty_token();
     let owner = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
     let model = String::from_str(&env, "iPhone 15 Pro");
     let contact = String::from_str(&env, "owner@email.com");
+
+    mint_bounty_tokens(&env, &token_address, &owner, 2_000_000i128);
 
     client.register_device(&owner, &hashed_imei, &model);
     client.report_stolen(&owner, &hashed_imei, &1_000_000i128, &contact);
@@ -178,12 +210,14 @@ fn test_report_stolen_twice() {
 
 #[test]
 fn test_confirm_recovery() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, token_address, _contract_id) = setup_with_bounty_token();
     let owner = Address::generate(&env);
     let finder = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
     let model = String::from_str(&env, "iPhone 15 Pro");
     let contact = String::from_str(&env, "owner@email.com");
+
+    mint_bounty_tokens(&env, &token_address, &owner, 1_000_000i128);
 
     // Register → Report Stolen → Recover
     client.register_device(&owner, &hashed_imei, &model);
@@ -203,7 +237,7 @@ fn test_confirm_recovery() {
 #[test]
 #[should_panic(expected = "device is not reported as stolen")]
 fn test_recover_not_stolen() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, _contract_id) = setup();
     let owner = Address::generate(&env);
     let finder = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
@@ -220,7 +254,7 @@ fn test_recover_not_stolen() {
 
 #[test]
 fn test_file_insurance_claim() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, _contract_id) = setup();
     let owner = Address::generate(&env);
     let insurer = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);
@@ -239,7 +273,7 @@ fn test_file_insurance_claim() {
 #[test]
 #[should_panic(expected = "insurance claim already filed")]
 fn test_file_insurance_claim_twice() {
-    let (env, client, _admin) = setup();
+    let (env, client, _admin, _contract_id) = setup();
     let owner = Address::generate(&env);
     let insurer = Address::generate(&env);
     let hashed_imei = fake_hashed_imei(&env);

@@ -47,13 +47,8 @@ use crate::{DataKey, DeviceState};
 /// - [ ] Emit an `InsuranceClaimed` event for indexers
 /// - [ ] Handle the bounty: should it be refunded to owner or forfeited?
 /// - [ ] Add a cooldown period between reporting stolen and filing insurance
-///       to prevent instant insurance fraud
-pub fn file_insurance_claim(
-    env: Env,
-    owner: Address,
-    hashed_imei: BytesN<32>,
-    insurer: Address,
-) {
+///   to prevent instant insurance fraud
+pub fn file_insurance_claim(env: Env, owner: Address, hashed_imei: BytesN<32>, insurer: Address) {
     owner.require_auth();
 
     let device_key = DataKey::Device(hashed_imei.clone());
