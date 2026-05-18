@@ -76,7 +76,7 @@ pub fn register_device(
     // Emit DeviceRegistered event
     env.events().publish(
         (symbol_short!("dev_reg"), symbol_short!("register")),
-        (hashed_imei.clone(), owner.clone(), device_model)
+        (hashed_imei.clone(), owner.clone(), device_model),
     );
 
     device

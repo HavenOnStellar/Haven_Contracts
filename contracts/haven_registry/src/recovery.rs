@@ -38,17 +38,12 @@ use crate::{DataKey, DeviceState};
 ///
 /// # TODO
 /// - [ ] Actually transfer the escrowed tokens to the finder:
-///       `token::Client::new(&env, &token_address).transfer(&contract_address, &finder, &bounty)`
+///   `token::Client::new(&env, &token_address).transfer(&contract_address, &finder, &bounty)`
 /// - [ ] Emit a `DeviceRecovered` event for indexers
 /// - [ ] Consider a time-lock: prevent instant recovery to avoid bounty gaming
 /// - [ ] Add a "recovery proof" mechanism (e.g., both parties sign off)
 /// - [ ] Record recovery history for insurance audit trails
-pub fn confirm_recovery(
-    env: Env,
-    owner: Address,
-    hashed_imei: BytesN<32>,
-    finder: Address,
-) {
+pub fn confirm_recovery(env: Env, owner: Address, hashed_imei: BytesN<32>, finder: Address) {
     owner.require_auth();
 
     let device_key = DataKey::Device(hashed_imei.clone());
