@@ -16,25 +16,37 @@ use soroban_sdk::{Address, BytesN, Env, String};
 
 use crate::{DataKey, DeviceState};
 
+/// Minimum bounty amount required for reporting a device as stolen.
+///
+/// This is denominated in stroops (1 XLM = 10,000,000 stroops) or the smallest
+/// unit of the token being used (e.g., for USDC: 1 USDC = 1,000,000 units).
+///
+/// The minimum is set to 1 XLM (10,000,000 stroops) to ensure economic viability
+/// of the recovery bounty system and prevent spam reports.
+pub const MIN_BOUNTY_AMOUNT: i128 = 10_000_000; // 1 XLM in stroops
+
 /// Report a device as stolen and deposit a recovery bounty.
 ///
 /// # Flow
 /// 1. Verify the owner has signed the transaction
 /// 2. Load the device state and verify ownership
-/// 3. Flip `is_stolen` to `true`
-/// 4. Store the bounty amount in escrow
-/// 5. Save the recovery contact for the finder
+/// 3. Validate the bounty amount meets minimum requirements
+/// 4. Flip `is_stolen` to `true`
+/// 5. Store the bounty amount in escrow
+/// 6. Save the recovery contact for the finder
 ///
 /// # Arguments
 /// * `owner` - Must match the device's registered owner
 /// * `hashed_imei` - The SHA-256 hash identifying the device
-/// * `bounty_amount` - Amount to escrow (in stroops for XLM, or smallest unit for USDC)
+/// * `bounty_amount` - Amount to escrow (in stroops for XLM, or smallest unit for USDC).
+///                     Must be at least `MIN_BOUNTY_AMOUNT` (1 XLM = 10,000,000 stroops).
 /// * `recovery_contact` - Email or phone number for the finder to contact
 ///
 /// # Panics
 /// - If the device doesn't exist
 /// - If `owner` doesn't match the registered owner
 /// - If the device is already reported as stolen
+/// - If `bounty_amount` is zero, negative, or below the minimum threshold
 ///
 /// # TODO
 /// - [ ] Actually transfer XLM/USDC from the owner to the contract's balance
@@ -42,7 +54,6 @@ use crate::{DataKey, DeviceState};
 ///       `token::Client::new(&env, &token_address).transfer(&owner, &contract_address, &bounty_amount)`
 /// - [ ] Emit a `DeviceStolen` event for indexers and notification services
 /// - [ ] Allow the owner to increase the bounty after initial report
-/// - [ ] Add a minimum bounty threshold to ensure economic viability
 pub fn report_stolen(
     env: Env,
     owner: Address,
@@ -51,6 +62,15 @@ pub fn report_stolen(
     recovery_contact: String,
 ) {
     owner.require_auth();
+
+    // Validate bounty amount
+    if bounty_amount <= 0 {
+        panic!("bounty amount must be positive");
+    }
+
+    if bounty_amount < MIN_BOUNTY_AMOUNT {
+        panic!("bounty amount below minimum threshold");
+    }
 
     let device_key = DataKey::Device(hashed_imei.clone());
     let mut device: DeviceState = env

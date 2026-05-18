@@ -145,13 +145,13 @@ fn test_report_stolen() {
     let contact = String::from_str(&env, "owner@email.com");
 
     client.register_device(&owner, &hashed_imei, &model);
-    client.report_stolen(&owner, &hashed_imei, &1_000_000i128, &contact);
+    client.report_stolen(&owner, &hashed_imei, &10_000_000i128, &contact);
 
     let device = client.get_device(&hashed_imei);
     assert_eq!(device.is_stolen, true);
 
     let bounty = client.get_bounty(&hashed_imei);
-    assert_eq!(bounty, 1_000_000i128);
+    assert_eq!(bounty, 10_000_000i128);
 
     // TODO: Verify the actual token transfer occurred
     // TODO: Verify the DeviceStolen event was emitted
@@ -167,9 +167,89 @@ fn test_report_stolen_twice() {
     let contact = String::from_str(&env, "owner@email.com");
 
     client.register_device(&owner, &hashed_imei, &model);
-    client.report_stolen(&owner, &hashed_imei, &1_000_000i128, &contact);
+    client.report_stolen(&owner, &hashed_imei, &10_000_000i128, &contact);
     // Should panic — already reported
-    client.report_stolen(&owner, &hashed_imei, &1_000_000i128, &contact);
+    client.report_stolen(&owner, &hashed_imei, &10_000_000i128, &contact);
+}
+
+#[test]
+#[should_panic(expected = "bounty amount must be positive")]
+fn test_report_stolen_zero_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    // Should panic — zero bounty amount
+    client.report_stolen(&owner, &hashed_imei, &0i128, &contact);
+}
+
+#[test]
+#[should_panic(expected = "bounty amount must be positive")]
+fn test_report_stolen_negative_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    // Should panic — negative bounty amount
+    client.report_stolen(&owner, &hashed_imei, &-1_000_000i128, &contact);
+}
+
+#[test]
+#[should_panic(expected = "bounty amount below minimum threshold")]
+fn test_report_stolen_below_minimum_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    // Should panic — below minimum threshold (1 XLM = 10,000,000 stroops)
+    client.report_stolen(&owner, &hashed_imei, &9_999_999i128, &contact);
+}
+
+#[test]
+fn test_report_stolen_valid_minimum_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    // Should succeed — exactly at minimum threshold
+    client.report_stolen(&owner, &hashed_imei, &10_000_000i128, &contact);
+
+    let device = client.get_device(&hashed_imei);
+    assert_eq!(device.is_stolen, true);
+
+    let bounty = client.get_bounty(&hashed_imei);
+    assert_eq!(bounty, 10_000_000i128);
+}
+
+#[test]
+fn test_report_stolen_valid_above_minimum_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    // Should succeed — above minimum threshold
+    client.report_stolen(&owner, &hashed_imei, &50_000_000i128, &contact);
+
+    let device = client.get_device(&hashed_imei);
+    assert_eq!(device.is_stolen, true);
+
+    let bounty = client.get_bounty(&hashed_imei);
+    assert_eq!(bounty, 50_000_000i128);
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +267,7 @@ fn test_confirm_recovery() {
 
     // Register → Report Stolen → Recover
     client.register_device(&owner, &hashed_imei, &model);
-    client.report_stolen(&owner, &hashed_imei, &1_000_000i128, &contact);
+    client.report_stolen(&owner, &hashed_imei, &10_000_000i128, &contact);
     client.confirm_recovery(&owner, &hashed_imei, &finder);
 
     let device = client.get_device(&hashed_imei);
