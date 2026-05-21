@@ -16,6 +16,12 @@ use soroban_sdk::{Address, BytesN, Env, String};
 
 use crate::{DataKey, DeviceState};
 
+/// Minimum recovery bounty in the asset's smallest unit.
+///
+/// For XLM this is stroops, so this value is 0.1 XLM. For USDC or any other
+/// 7-decimal Stellar asset, it is 0.1 token units.
+pub const MIN_BOUNTY_AMOUNT: i128 = 1_000_000;
+
 /// Report a device as stolen and deposit a recovery bounty.
 ///
 /// # Flow
@@ -35,6 +41,7 @@ use crate::{DataKey, DeviceState};
 /// - If the device doesn't exist
 /// - If `owner` doesn't match the registered owner
 /// - If the device is already reported as stolen
+/// - If `bounty_amount` is zero, negative, or below `MIN_BOUNTY_AMOUNT`
 ///
 /// # TODO
 /// - [ ] Actually transfer XLM/USDC from the owner to the contract's balance
@@ -51,6 +58,13 @@ pub fn report_stolen(
     recovery_contact: String,
 ) {
     owner.require_auth();
+
+    if bounty_amount <= 0 {
+        panic!("bounty amount must be positive");
+    }
+    if bounty_amount < MIN_BOUNTY_AMOUNT {
+        panic!("bounty amount below minimum");
+    }
 
     let device_key = DataKey::Device(hashed_imei.clone());
     let mut device: DeviceState = env

@@ -22,7 +22,7 @@
 use soroban_sdk::{testutils::Address as _, Address, BytesN, Env, String};
 use soroban_sdk::testutils::Events;
 
-use crate::{HavenRegistry, HavenRegistryClient};
+use crate::{killswitch::MIN_BOUNTY_AMOUNT, HavenRegistry, HavenRegistryClient};
 
 /// Helper: create a test environment and deploy the contract.
 fn setup() -> (Env, HavenRegistryClient<'static>, Address) {
@@ -68,7 +68,7 @@ fn test_register_device() {
     // Verify the DeviceRegistered event was emitted
     let events = env.events().all();
     assert!(!events.is_empty(), "Expected at least one event to be emitted");
-    
+
     let event = events.last().unwrap();
     
     // Event structure: (contract_address, topics, data)
@@ -93,7 +93,7 @@ fn test_register_device_emits_event() {
     // Verify event emission
     let events = env.events().all();
     assert_eq!(events.len(), 1, "Expected exactly one event to be emitted");
-    
+
     let event = events.first().unwrap();
     let (_contract_id, topics, _data) = event;
     
@@ -145,16 +145,55 @@ fn test_report_stolen() {
     let contact = String::from_str(&env, "owner@email.com");
 
     client.register_device(&owner, &hashed_imei, &model);
-    client.report_stolen(&owner, &hashed_imei, &1_000_000i128, &contact);
+    client.report_stolen(&owner, &hashed_imei, &MIN_BOUNTY_AMOUNT, &contact);
 
     let device = client.get_device(&hashed_imei);
     assert_eq!(device.is_stolen, true);
 
     let bounty = client.get_bounty(&hashed_imei);
-    assert_eq!(bounty, 1_000_000i128);
+    assert_eq!(bounty, MIN_BOUNTY_AMOUNT);
 
     // TODO: Verify the actual token transfer occurred
     // TODO: Verify the DeviceStolen event was emitted
+}
+
+#[test]
+#[should_panic(expected = "bounty amount must be positive")]
+fn test_report_stolen_rejects_zero_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    client.report_stolen(&owner, &hashed_imei, &0i128, &contact);
+}
+
+#[test]
+#[should_panic(expected = "bounty amount must be positive")]
+fn test_report_stolen_rejects_negative_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    client.report_stolen(&owner, &hashed_imei, &-1i128, &contact);
+}
+
+#[test]
+#[should_panic(expected = "bounty amount below minimum")]
+fn test_report_stolen_rejects_below_minimum_bounty() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let hashed_imei = fake_hashed_imei(&env);
+    let model = String::from_str(&env, "iPhone 15 Pro");
+    let contact = String::from_str(&env, "owner@email.com");
+
+    client.register_device(&owner, &hashed_imei, &model);
+    client.report_stolen(&owner, &hashed_imei, &(MIN_BOUNTY_AMOUNT - 1), &contact);
 }
 
 #[test]
